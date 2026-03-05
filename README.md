@@ -27,36 +27,6 @@
 
 ---
 
-## Performance
-
-### Absolute Positioning Accuracy (RMSE)
-
-| Method | Exp 1: Urban Handheld | Exp 2: UAV Flight |
-|--------|:-----:|:-----:|
-| SPP | 50.96 m | — |
-| VINS-Mono | 20.81 m | 6.61 m |
-| GVINS | 9.02 m | 4.02 m |
-| **DC-GVINS** | **3.25 m** | **1.50 m** |
-
-### Relative Positioning Accuracy (RMSE)
-
-| Method | Exp 1: Baseline Length | Exp 1: Vector Error | Exp 2: Baseline Length | Exp 2: Vector Error |
-|--------|:-----:|:-----:|:-----:|:-----:|
-| VINS-Mono | 23.73 m | 40.58 m | 1.55 m | 1.87 m |
-| GVINS | 12.41 m | 20.18 m | 1.16 m | 1.41 m |
-| **DC-GVINS** | **2.14 m** | **4.33 m** | **0.69 m** | **0.79 m** |
-
-### Computational Efficiency
-
-| Platform | GVINS | DC-GVINS (10 DD) | Overhead |
-|----------|:-----:|:-----:|:-----:|
-| Intel i7-1165G7 | 20.94 ms | 26.41 ms | +26% |
-| Jetson AGX Xavier | 10.45 ms | 12.86 ms | +23% |
-
-DD factor cost: ~0.017 ms per constraint (analytical Jacobians).
-
----
-
 ## 1. Prerequisites
 
 ### Dependencies
@@ -202,12 +172,6 @@ If you find this work useful, please cite:
   note      = {Under review}
 }
 ```
-
----
-
-## Related Projects
-- [gnss_comm](https://github.com/HKUST-Aerial-Robotics/gnss_comm) — GNSS Communication ROS Package
-- [RTKLIB](https://github.com/tomojitakasu/RTKLIB) — Open Source GNSS Positioning
 
 ---
 
