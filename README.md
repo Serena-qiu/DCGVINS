@@ -1,14 +1,16 @@
 # Tightly-Coupled Double-Difference GNSS Constrained Collaborative Visual-Inertial Navigation for Multi-Agent Systems
+# DC-GVINS
+
+### Tightly-Coupled Double-Difference GNSS Constrained Collaborative Visual-Inertial Navigation for Multi-Agent Systems
 
 <p align="center">
   <a href="https://youtu.be/2zWdf0J1EU0"><img src="https://img.shields.io/badge/Video-YouTube-red?logo=youtube" alt="Video"></a>
   <a href="#"><img src="https://img.shields.io/badge/Paper-IEEE-blue" alt="Paper"></a>
   <a href="#license"><img src="https://img.shields.io/badge/License-GPL--3.0-green" alt="License"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Platform-ROS%20Noetic-brightgreen?logo=ros" alt="ROS"></a>
 </p>
 
 <p align="center">
-  <img src="docs/system_overview.png" width="90%" alt="DC-GVINS System Overview">
+  <img src="https://github.com/user-attachments/assets/972d752d-63a7-4f92-9538-d73206b1beeb" width="90%" alt="DC-GVINS System Overview">
 </p>
 
 **DC-GVINS** is a fully distributed, tightly coupled framework that integrates **infrastructure-free double-difference (DD) GNSS constraints** into visual-inertial state estimation for multi-agent systems. By exploiting the geometric co-observation of satellites between agents, DC-GVINS eliminates common-mode atmospheric and clock errors without requiring static base stations, achieving simultaneous improvement in both absolute and relative positioning accuracy.
@@ -55,165 +57,133 @@ DD factor cost: ~0.017 ms per constraint (analytical Jacobians).
 
 ---
 
-## System Architecture
+## 1. Prerequisites
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Agent M (Primary)                │
-│                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
-│  │  Camera   │  │   IMU    │  │  GNSS Receiver   │  │
-│  └────┬─────┘  └────┬─────┘  └────────┬─────────┘  │
-│       │              │                 │             │
-│       ▼              ▼                 ▼             │
-│  ┌─────────────────────────────────────────────┐    │
-│  │       Tightly Coupled Factor Graph          │    │
-│  │                                             │    │
-│  │  Visual ── IMU ── GNSS ── DD Factors        │    │
-│  │  Factors   Factors Factors  ▲               │    │
-│  └─────────────────────────────┼───────────────┘    │
-│                                │                     │
-└────────────────────────────────┼─────────────────────┘
-                                 │  Peer-to-Peer
-                                 │  (~2.5 KB/s)
-┌────────────────────────────────┼─────────────────────┐
-│                    Agent N (Secondary)               │
-│                                │                     │
-│  ┌──────────┐  ┌──────────┐  ┌┴─────────────────┐   │
-│  │  Camera   │  │   IMU    │  │  GNSS Receiver   │   │
-│  └────┬─────┘  └────┬─────┘  └────────┬─────────┘   │
-│       ▼              ▼                 ▼              │
-│  ┌──────────────────────────────────────────────┐    │
-│  │       Independent Factor Graph               │    │
-│  └──────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────┘
-```
+### Dependencies
 
----
+| Dependency | Version | Notes |
+|------------|---------|-------|
+| ROS | Kinetic | `ros-kinetic-perception` meta-package |
+| Eigen | 3.3.3 | Built from source |
+| Ceres Solver | 1.12.0 | Built from source |
+| OpenCV | Included with ROS | Via `cv_bridge` |
+| [gnss_comm](https://github.com/HKUST-Aerial-Robotics/gnss_comm) | latest | GNSS message definitions |
 
-## Prerequisites
+Additional ROS packages: `cv-bridge`, `image-transport`, `message-filters`, `tf`.
 
-### Hardware Requirements
+### Hardware (for real-world deployment)
 
 - Monocular or stereo camera
 - IMU (≥200 Hz)
-- Multi-constellation GNSS receiver (e.g., u-blox F9P) supporting GPS/GLONASS/Galileo/BeiDou
-- WiFi or other wireless communication link between agents
-
-### Software Dependencies
-
-- **Ubuntu 20.04**
-- **ROS Noetic**
-- **OpenCV** ≥ 3.4
-- **Ceres Solver** ≥ 2.0
-- **Eigen3** ≥ 3.3
+- Multi-constellation GNSS receiver (e.g., u-blox F9P)
+- WiFi link between agents
 
 ---
 
-## Build
+## 2. Build
+
+### Option A: Docker (Recommended)
+
+A Dockerfile is provided for reproducible builds with all dependencies pre-configured.
+
+```bash
+# Clone the repository
+git clone https://github.com/Serena-qiu/DCGVINS.git
+cd DCGVINS
+
+# Build Docker image
+docker build -t dc-gvins .
+
+# Run container
+docker run -it --rm \
+    -v /path/to/your/data:/root/data \
+    dc-gvins
+```
+
+The Docker image handles the full toolchain: Eigen 3.3.3, Ceres 1.12.0, gnss_comm, and all ROS dependencies are built automatically. The workspace is ready to use once the container starts.
+
+### Option B: Native Build
+
+If you prefer a native installation, follow these steps on **Ubuntu 16.04 with ROS Kinetic**.
+
+**Install system dependencies:**
+
+```bash
+sudo apt-get update && sudo apt-get install -y \
+    git cmake libatlas-base-dev libgoogle-glog-dev \
+    libsuitesparse-dev python-catkin-tools \
+    ros-kinetic-cv-bridge ros-kinetic-image-transport \
+    ros-kinetic-message-filters ros-kinetic-tf
+```
+
+**Build Eigen 3.3.3:**
+
+```bash
+git clone https://gitlab.com/libeigen/eigen.git
+cd eigen && git checkout tags/3.3.3
+mkdir build && cd build
+cmake .. && sudo make install
+cd ../.. && rm -rf eigen
+```
+
+**Build Ceres Solver 1.12.0:**
+
+```bash
+git clone https://ceres-solver.googlesource.com/ceres-solver
+cd ceres-solver && git checkout tags/1.12.0
+mkdir build && cd build
+cmake .. && make -j$(nproc) && sudo make install
+cd ../.. && rm -rf ceres-solver
+```
+
+**Build the workspace:**
 
 ```bash
 # Create workspace
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/src
 
-# Clone repository
+# Clone gnss_comm
+git clone https://github.com/HKUST-Aerial-Robotics/gnss_comm.git
+
+# Clone DC-GVINS
 git clone https://github.com/Serena-qiu/DCGVINS.git
 
-# Install dependencies
-sudo apt-get install ros-noetic-cv-bridge ros-noetic-tf ros-noetic-message-filters
-
-# Build
+# Configure and build
 cd ~/catkin_ws
-catkin_make -j$(nproc)
-source devel/setup.bash
+catkin config \
+    --extend /opt/ros/kinetic \
+    --cmake-args \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_STANDARD=14 \
+    -DCMAKE_CXX_FLAGS="-std=c++14"
+
+# Build gnss_comm first, then remaining packages
+catkin build gnss_comm
+catkin build
+
+# Source workspace
+source ~/catkin_ws/devel/setup.bash
 ```
+
+> **Note**: If you encounter a `D2R` redefinition error during compilation, comment out the duplicate definition in `estimator/src/estimator_node.cpp`.
 
 ---
 
-## Quick Start
+## 3. Usage
 
-### Single-Pair Collaborative Navigation
-
-```bash
-# Terminal 1: Launch primary agent
-roslaunch dc_gvins primary_agent.launch
-
-# Terminal 2: Launch secondary agent
-roslaunch dc_gvins secondary_agent.launch
-
-# Terminal 3: Play rosbag (example dataset)
-rosbag play your_dataset.bag
-```
-
-### Configuration
-
-Key parameters in `config/dc_gvins.yaml`:
-
-```yaml
-# GNSS Configuration
-gnss:
-  enable_dd: true                # Enable double-difference constraints
-  dd_elevation_mask: 15.0        # Satellite elevation mask (degrees)
-  dd_snr_threshold: 30.0         # Minimum SNR for DD (dB-Hz)
-
-# Communication
-communication:
-  sync_threshold: 1.0            # Max time offset for DD (seconds)
-  degraded_threshold: 0.5        # Communication degraded threshold (s)
-  disconnected_threshold: 2.0    # Communication lost threshold (s)
-  weight_decay: 0.9              # Weight decay factor for degraded state
-
-# Outlier Rejection
-outlier:
-  mad_scale: 3.0                 # MAD-based outlier threshold
-  enable_adaptive_weight: true   # Enable quality-aware weighting
-```
+Detailed run instructions and example commands will be provided after the dataset release. Stay tuned.
 
 ---
 
-## Datasets
+## 4. Datasets
 
-We provide sample datasets collected in two scenarios:
+Datasets collected in Hong Kong urban environments will be released. Details coming soon.
 
-| Dataset | Platform | Duration | Environment | Download |
-|---------|----------|----------|-------------|----------|
-| HK Harbourfront | Handheld | 530 s | Dense urban canyon | [Link](#) |
-| UAV Flight | Quadcopter | 190 s | Semi-open campus | [Link](#) |
-
-### Data Format
-
-Each dataset contains:
-```
-dataset/
-├── agent_M/
-│   ├── camera/          # Image sequences
-│   ├── imu.csv          # IMU measurements (200 Hz)
-│   ├── gnss_raw.obs     # GNSS raw observations (10 Hz)
-│   └── ground_truth.csv # RTK reference trajectory
-├── agent_N/
-│   ├── ...              # Same structure
-└── calibration/
-    ├── cam_imu_M.yaml   # Camera-IMU extrinsics (Agent M)
-    └── cam_imu_N.yaml   # Camera-IMU extrinsics (Agent N)
-```
-
----
-
-## Evaluation
-
-We provide evaluation scripts for reproducing the results reported in the paper.
-
-```bash
-# Run evaluation on HK Harbourfront dataset
-python scripts/evaluate.py --dataset hk_harbour --method dc_gvins
-
-# Compare with baselines
-python scripts/evaluate.py --dataset hk_harbour --method all --plot
-
-# Compute relative positioning metrics
-python scripts/relative_eval.py --dataset hk_harbour
-```
+| Dataset | Platform | Duration | Environment | Status |
+|---------|----------|----------|-------------|--------|
+| HK Harbourfront | Handheld | 530 s | Dense urban canyon | Coming soon |
+| UAV Flight | Quadcopter | 190 s | Semi-open campus | Coming soon |
 
 ---
 
@@ -236,9 +206,7 @@ If you find this work useful, please cite:
 ---
 
 ## Related Projects
-
-- [GVINS](https://github.com/HKUST-Aerial-Robotics/GVINS) — Tightly Coupled GNSS-Visual-Inertial Fusion (single-agent baseline)
-- [VINS-Mono](https://github.com/HKUST-Aerial-Robotics/VINS-Mono) — Monocular Visual-Inertial State Estimator
+- [gnss_comm](https://github.com/HKUST-Aerial-Robotics/gnss_comm) — GNSS Communication ROS Package
 - [RTKLIB](https://github.com/tomojitakasu/RTKLIB) — Open Source GNSS Positioning
 
 ---
