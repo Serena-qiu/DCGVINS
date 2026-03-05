@@ -1,7 +1,4 @@
 # Tightly-Coupled Double-Difference GNSS Constrained Collaborative Visual-Inertial Navigation for Multi-Agent Systems
-# DC-GVINS
-
-### Tightly-Coupled Double-Difference GNSS Constrained Collaborative Visual-Inertial Navigation for Multi-Agent Systems
 
 <p align="center">
   <a href="https://youtu.be/2zWdf0J1EU0"><img src="https://img.shields.io/badge/Video-YouTube-red?logo=youtube" alt="Video"></a>
